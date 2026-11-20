@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="ko" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="꼬들" />
+  <title>꼬들 (Kkodle) - 아이폰 최적화 한국어 워들</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'Apple SD Gothic Neo', 'Malgun Gothic', 'sans-serif'],
+          }
+        }
+      }
+    };
+  </script>
+  <style>
+    :root {
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+      touch-action: manipulation;
+      overscroll-behavior: none;
+    }
+
+    body {
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.84); opacity: 0.7; }
+      55% { transform: scale(1.08); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes shakeRow {
+      0%, 100% { transform: translateX(0); }
+      15%, 55% { transform: translateX(-6px); }
+      35%, 75% { transform: translateX(6px); }
+    }
+
+    @keyframes flipTile {
+      0% { transform: rotateX(0deg); }
+      49% { transform: rotateX(90deg); }
+      50% { transform: rotateX(90deg); }
+      100% { transform: rotateX(0deg); }
+    }
+
+    @keyframes bounceWin {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-14px); }
+      60% { transform: translateY(-7px); }
+    }
+
+    .tile-pop { animation: popIn 0.13s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+    .row-shake { animation: shakeRow 0.38s ease-in-out; }
+    .tile-flip { animation: flipTile 0.5s ease-in-out forwards; }
+    .tile-bounce { animation: bounceWin 0.8s ease forwards; }
+
+    .kb-key {
+      transition: transform 0.05s ease, background-color 0.18s ease, color 0.18s ease;
+    }
+    .kb-key:active {
+      transform: scale(0.92);
+      filter: brightness(1.15);
+    }
+
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-[#0f172a] text-slate-900 dark:text-slate-100 flex flex-col items-center justify-between transition-colors duration-200">
+
+  <!-- 아이폰 17 화면 비율 최적화 메인 컨테이너 -->
+  <div id="app-container" class="w-full max-w-[430px] h-full flex flex-col justify-between px-2.5 pt-1 pb-2 relative">
+
+    <!-- 1. 상단 헤더 & 컨트롤 바 -->
+    <header class="w-full flex flex-col gap-1.5 shrink-0">
+      <div class="w-full h-11 flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-0.5">
+        <div class="flex items-center gap-0.5">
+          <button id="btn-help" aria-label="도움말" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-200/70 dark:hover:bg-slate-800 active:scale-95 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+          </button>
+          <button id="btn-new-puzzle" aria-label="새 문제" title="새 랜덤 문제" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-200/70 dark:hover:bg-slate-800 active:scale-95 transition text-emerald-600 dark:text-emerald-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 타이틀 & 무한 모드 상태 -->
+        <div class="flex flex-col items-center">
+          <div class="flex items-center gap-1.5">
+            <h1 class="text-xl font-extrabold tracking-tight">꼬들</h1>
+            <span class="text-[11px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">무한 모드</span>
+          </div>
+          <span id="pool-count-text" class="text-[10px] font-medium text-slate-500 dark:text-slate-400 -mt-0.5">단자모 0단어</span>
+        </div>
+
+        <div class="flex items-center gap-0.5">
+          <button id="btn-stats" aria-label="통계" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-200/70 dark:hover:bg-slate-800 active:scale-95 transition">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="18" y1="20" x2="18" y2="10"></line>
+              <line x1="12" y1="20" x2="12" y2="4"></line>
+              <line x1="6" y1="20" x2="6" y2="14"></line>
+            </svg>
+          </button>
+          <button id="btn-theme" aria-label="테마 전환" class="w-9 h-9 rounded-full flex items-center justify-center hover:bg-slate-200/70 dark:hover:bg-slate-800 active:scale-95 transition">
+            <svg class="w-5 h-5 hidden dark:block text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="5"></circle>
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+            </svg>
+            <svg class="w-5 h-5 block dark:hidden text-slate-700" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- 2단 컨트롤 바: 복자모 포함 스위치 | 실시간 한글 조합 미리보기 -->
+      <div class="w-full flex items-center justify-between gap-2 px-0.5 py-0.5">
+        <button id="btn-toggle-complex" type="button" class="flex items-center gap-2 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700/80 shadow-2xs active:scale-95 transition">
+          <span class="text-xs font-bold text-slate-700 dark:text-slate-200">복자모 포함</span>
+          <span id="complex-pill" class="w-8 h-4.5 rounded-full bg-slate-300 dark:bg-slate-600 p-0.5 flex items-center justify-start transition-colors">
+            <span class="w-3.5 h-3.5 rounded-full bg-white shadow-xs"></span>
+          </span>
+        </button>
+
+        <div class="flex items-center gap-1.5 bg-white dark:bg-slate-800/90 px-3 py-1 rounded-xl border border-slate-200 dark:border-slate-700/80 shadow-2xs">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">실시간 조합</span>
+          <span id="live-preview" class="text-xs font-extrabold tracking-wider text-emerald-600 dark:text-emerald-400 min-w-[3.2rem] text-center">
+            · · ·
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 토스트 알림 컨테이너 -->
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none w-full max-w-[360px] px-4"></div>
+
+    <!-- 2. 중앙 6x6 자모 게임 보드 -->
+    <main class="flex-1 w-full flex flex-col items-center justify-center min-h-0 my-1">
+      <div id="board-wrapper" class="w-full flex flex-col items-center justify-center gap-1.5"></div>
+    </main>
+
+    <!-- 3. 하단 한국어 두벌식 키보드 (단자모 24자 / 복자모 36자 자동 전환) -->
+    <section id="keyboard-section" class="w-full shrink-0 flex flex-col gap-1.5 pt-1 select-none">
+      <div id="kb-row-1" class="grid grid-cols-8 gap-1 w-full"></div>
+      <div id="kb-row-2" class="grid grid-cols-9 gap-1 w-full px-1"></div>
+      <div id="kb-row-3" class="flex items-center gap-1 w-full"></div>
+      <div class="flex items-center gap-1.5 w-full mt-0.5">
+        <button id="btn-hint" type="button" class="h-11 px-3 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-1 active:scale-95 transition shrink-0">
+          <span>💡 힌트</span>
+        </button>
+        <button id="btn-submit" type="button" class="flex-1 h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-sm tracking-wide shadow-xs active:scale-[0.98] transition flex items-center justify-center gap-1.5">
+          <span>입력하기</span>
+          <span id="submit-count-hint" class="text-xs font-normal opacity-85">(0/6)</span>
+        </button>
+        <button id="btn-next-after-end" type="button" class="hidden h-11 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs items-center justify-center active:scale-95 transition shrink-0">
+          다음 문제 ↻
+        </button>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ================= 모달 영역 ================= -->
+
+  <!-- 1. 게임 방법 모달 -->
+  <div id="modal-help" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-[380px] max-h-[85dvh] overflow-y-auto no-scrollbar p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-extrabold">꼬들 (무한 모드) 안내</h2>
+        <button class="close-modal w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">✕</button>
+      </div>
+      <div class="space-y-3 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        <p><strong>6번의 기회</strong> 안에 고유명사를 제외한 <strong>순수 한국어 일반 6자모 단어</strong>를 맞혀보세요!</p>
+        <div class="text-xs bg-slate-100 dark:bg-slate-800/90 p-3 rounded-xl space-y-1.5">
+          <p><strong>1) 2글자 받침 단어:</strong> <span class="font-bold text-emerald-600 dark:text-emerald-400">감옥</span> → <span class="font-mono font-bold">ㄱ ㅏ ㅁ ㅇ ㅗ ㄱ</span> (6자모)</p>
+          <p><strong>2) 3글자 단어:</strong> <span class="font-bold text-emerald-600 dark:text-emerald-400">바나나</span> → <span class="font-mono font-bold">ㅂ ㅏ ㄴ ㅏ ㄴ ㅏ</span> (6자모)</p>
+        </div>
+
+        <div class="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
+          <p class="font-bold text-slate-900 dark:text-white text-xs">타일 색상 판정</p>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-7 h-7 rounded-md bg-[#22c55e] text-white font-bold flex items-center justify-center shrink-0">ㄱ</span>
+            <span><strong>초록색:</strong> 자모와 위치가 모두 정확함</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-7 h-7 rounded-md bg-[#eab308] text-white font-bold flex items-center justify-center shrink-0">ㅏ</span>
+            <span><strong>노란색:</strong> 단어에 포함되나 위치가 다름</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="w-7 h-7 rounded-md bg-[#334155] text-white font-bold flex items-center justify-center shrink-0">ㅁ</span>
+            <span><strong>회색:</strong> 정답 단어에 없는 자모</span>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 dark:border-slate-700 pt-2.5 text-xs text-slate-500 dark:text-slate-400 space-y-1">
+          <p>• <strong>자유로운 단어 입력:</strong> 올바른 한글 음절(초성·중성·종성)로 완성된 모든 6자모 단어를 제약 없이 입력해 추리할 수 있습니다.</p>
+          <p>• <strong>복자모 포함 OFF (기본):</strong> 24개 기본 자모(14자음+10모음) 단어만 출제되며 키보드도 24자모 전용으로 표시됩니다.</p>
+          <p>• <strong>복자모 포함 ON:</strong> 쌍자음(ㄲ,ㄸ,ㅃ,ㅆ,ㅉ) 및 이중모음(ㅐ,ㅔ,ㅘ,ㅝ,ㅢ,ㅚ,ㅟ 등) 포함 단어까지 출제되며 키보드에 <strong>쌍/복</strong> 전환 버튼이 나타납니다.</p>
+        </div>
+      </div>
+      <button class="close-modal mt-4 w-full py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm">게임 시작</button>
+    </div>
+  </div>
+
+  <!-- 2. 통계 및 결과 모달 -->
+  <div id="modal-stats" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-2xl w-full max-w-[380px] p-5 shadow-2xl">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-extrabold">나의 꼬들 통계</h2>
+        <button class="close-modal w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-500">✕</button>
+      </div>
+
+      <!-- 정답 공개 카드 -->
+      <div id="result-word-card" class="hidden mb-4 p-3.5 rounded-xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-center">
+        <p id="result-status-text" class="text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">정답 공개</p>
+        <div id="result-word-display" class="text-2xl font-black tracking-widest mb-1">한글</div>
+        <div id="result-jamo-display" class="text-xs font-mono text-slate-500 dark:text-slate-400">ㅎ · ㅏ · ㄴ · ㄱ · ㅡ · ㄹ</div>
+        <div id="result-category-display" class="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-1">분류: 일반 어휘</div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-2 text-center mb-4">
+        <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+          <div id="stat-played" class="text-xl font-extrabold">0</div>
+          <div class="text-[11px] text-slate-500">플레이</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+          <div id="stat-win-pct" class="text-xl font-extrabold">0%</div>
+          <div class="text-[11px] text-slate-500">정답률</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+          <div id="stat-streak" class="text-xl font-extrabold">0</div>
+          <div class="text-[11px] text-slate-500">연속 정답</div>
+        </div>
+        <div class="p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+          <div id="stat-max-streak" class="text-xl font-extrabold">0</div>
+          <div class="text-[11px] text-slate-500">최대 연승</div>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <h3 class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">시도 횟수 분포</h3>
+        <div id="guess-distribution" class="space-y-1.5 text-xs font-bold"></div>
+      </div>
+
+      <div class="flex gap-2">
+        <button id="btn-share" type="button" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm flex items-center justify-center gap-1.5 active:scale-95 transition">
+          <span>결과 공유</span>
+        </button>
+        <button id="btn-modal-next" type="button" class="flex-1 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm active:scale-95 transition">
+          다음 문제
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * =========================================================================
+     * 1. 한글 유니코드 자모 분해 / 조합 및 음절 구조 검증 엔진
+     * =========================================================================
+     */
+    const CHO = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+    const JUNG = ['ㅏ','ㅐ','ㅑ','ㅒ','ㅓ','ㅔ','ㅕ','ㅖ','ㅗ','ㅘ','ㅙ','ㅚ','ㅛ','ㅜ','ㅝ','ㅞ','ㅟ','ㅠ','ㅡ','ㅢ','ㅣ'];
+    const JONG = ['','ㄱ','ㄲ','ㄳ','ㄴ','ㄵ','ㄶ','ㄷ','ㄹ','ㄺ','ㄻ','ㄼ','ㄽ','ㄾ','ㄿ','ㅀ','ㅁ','ㅂ','ㅄ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+
+    // 표준 받침(종성)으로 허용되는 단일 자음 (ㄸ, ㅃ, ㅉ는 한국어 받침에 존재하지 않음)
+    const VALID_SINGLE_JONG = new Set(['ㄱ','ㄲ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅆ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ']);
+
+    const BASIC_CONSONANTS = new Set(['ㄱ','ㄴ','ㄷ','ㄹ','ㅁ','ㅂ','ㅅ','ㅇ','ㅈ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ']);
+    const BASIC_VOWELS = new Set(['ㅏ','ㅑ','ㅓ','ㅕ','ㅗ','ㅛ','ㅜ','ㅠ','ㅡ','ㅣ']);
+    const ALL_CONSONANTS = new Set(CHO);
+    const ALL_VOWELS = new Set(JUNG);
+
+    // 기본 모음 연속 터치 시 이중모음 자동 병합 맵
+    const VOWEL_COMBINE_MAP = {
+      'ㅗㅏ': 'ㅘ', 'ㅗㅐ': 'ㅙ', 'ㅗㅣ': 'ㅚ',
+      'ㅜㅓ': 'ㅝ', 'ㅜㅔ': 'ㅞ', 'ㅜㅣ': 'ㅟ',
+      'ㅡㅣ': 'ㅢ', 'ㅏㅣ': 'ㅐ', 'ㅓㅣ': 'ㅔ',
+      'ㅑㅣ': 'ㅒ', 'ㅕㅣ': 'ㅖ'
+    };
+
+    /**
+     * 단어를 6개 단일 키 자모 배열로 분해하고 복자모 포함 여부를 판별
+     */
+    function analyzeWord6Jamo(word, category = '일반 어휘') {
+      if (!word || word.length < 2 || word.length > 3) return null;
+      const jamos = [];
+      let isComplex = false;
+
+      for (let i = 0; i < word.length; i++) {
+        const code = word.charCodeAt(i) - 0xAC00;
+        if (code < 0 || code > 11171) return null;
+
+        const cIdx = Math.floor(code / 588);
+        const vIdx = Math.floor((code % 588) / 28);
+        const tIdx = code % 28;
+
+        const cChar = CHO[cIdx];
+        const vChar = JUNG[vIdx];
+        jamos.push(cChar, vChar);
+
+        if (!BASIC_CONSONANTS.has(cChar) || !BASIC_VOWELS.has(vChar)) {
+          isComplex = true;
+        }
+
+        if (tIdx > 0) {
+          const tChar = JONG[tIdx];
+          if (!VALID_SINGLE_JONG.has(tChar)) return null; // 겹받침(ㄳ, ㄺ 등) 제외
+          jamos.push(tChar);
+          if (!BASIC_CONSONANTS.has(tChar)) {
+            isComplex = true;
+          }
+        }
+      }
+
+      if (jamos.length !== 6) return null;
+      return { word, jamos, isComplex, category };
+    }
+
+    /**
+     * 입력된 6개 자모 배열을 실시간 한글 음절로 조합
+     */
+    function assembleJamosToKorean(jamos) {
+      if (!jamos || jamos.length === 0) return '';
+      let out = '';
+      let i = 0;
+
+      while (i < jamos.length) {
+        const ch = jamos[i];
+        const next = jamos[i + 1];
+
+        if (ALL_CONSONANTS.has(ch) && next && ALL_VOWELS.has(next)) {
+          const cIdx = CHO.indexOf(ch);
+          const vIdx = JUNG.indexOf(next);
+          const third = jamos[i + 2];
+          const fourth = jamos[i + 3];
+
+          if (third && VALID_SINGLE_JONG.has(third) && (!fourth || !ALL_VOWELS.has(fourth))) {
+            const tIdx = JONG.indexOf(third);
+            if (tIdx > 0) {
+              out += String.fromCharCode(0xAC00 + cIdx * 588 + vIdx * 28 + tIdx);
+              i += 3;
+              continue;
+            }
+          }
+
+          out += String.fromCharCode(0xAC00 + cIdx * 588 + vIdx * 28);
+          i += 2;
+        } else {
+          out += ch;
+          i += 1;
+        }
+      }
+      return out;
+    }
+
+    /**
+     * =========================================================================
+     * 2. 고유명사 완전 제외 순수 한국어 일반 어휘 압축 사전 (1,650+ 단어)
+     *    - '감옥' 등 일상 명사 전면 포함, 지명/인명/국가명/브랜드명 철저히 배제
+     * =========================================================================
+     */
+    const CATEGORIZED_RAW_WORDS = [
+      {
+        cat: '일상 · 생활 · 사회',
+        words: "감옥,한글,사랑,행복,시간,친구,가족,음악,영화,여행,우산,안경,책상,연필,공책,지갑,창문,거울,사진,편지,선물,운동,등산,수영,축구,농구,병원,약국,학교,교실,선생,학생,시험,방학,졸업,입학,직장,출근,퇴근,월급,주말,명절,추석,설날,생일,결혼,공연,전시,미술,과학,수학,문학,소설,시집,신문,방송,충전,공항,생각,느낌,기억,추억,희망,용기,약속,비밀,거짓,진실,믿음,존경,감동,기쁨,슬픔,분노,걱정,불안,긴장,안정,평온,만족,욕심,양심,성격,습관,노력,성공,실패,도전,경험,실력,천재,영웅,왕자,장군,경찰,소방,은행,시장,식당,서점,극장,공원,광장,골목,건물,지붕,기둥,방문,부엌,거실,침실,욕실,이불,식탁,접시,주방,냉장,세탁,청소,정리,분리,포장,주문,결제,할인,적립,환불,영수,통장,현금,동전,보물,황금,진주,반지,달력,일기,수첩,도장,명함,봉투,우표,잡지,만화,동화,전설,신화,영혼,천국,지옥,운명,기적,행운,축복,환영,작별,이별,만남,인연,우정,열정,감정,이성,본능,상상,환상,현실,순간,영원,시작,출발,도착,방향,목적,방법,해결,정답,오답,힌트,법원,판사,검사,죄수,형벌,규칙,질서,자유,평화,권리,의무,책임,봉사,기부,나눔,배려,예의,존중,신뢰,의리,우애,효도,사랑방,어머니,아버지,할머니,선생님,대통령,장관님,공무원,회사원,운전사,요리사,간호사,약사님,의사님,변호사,기자단,작가님,화가님,가수왕,배우님,감독관,심판진,관중석,응원단,유니폼,라커룸"
+      },
+      {
+        cat: '자연 · 계절 · 날씨',
+        words: "구름,바람,봄날,여름,가을,겨울,달빛,별빛,아침,점심,저녁,밤낮,눈빛,손길,발길,숨결,물결,강물,산길,돌담,꽃잎,꽃밭,풀잎,단풍,낙엽,첫눈,함박,장마,천둥,안개,이슬,서리,얼음,불꽃,연기,향기,하늘색,무지개,소나무,대나무,단풍잎,참나무,밤나무,감나무,배나무,무궁화,진달래,개나리,장미꽃,민들레,나팔꽃,봉선화,채송화,수선화,백합꽃,국화꽃,동백꽃,매화꽃,목련꽃,라일락,자스민,라벤더,선인장,다육이,계곡물,가을비,겨울밤,눈보라,눈사람,눈사태,노을빛,강변길,산책길,오솔길,숲속길,바닷가,모래성,파도타,밀물때,썰물때,은하수,유성우,보름달,초승달,반달곰,햇살이,맑은날,흐린날,소나기,가랑비,보슬비,진눈깨,우박이,회오리,태풍권,지진파,화산섬,온천수,빙하수,사막화,오아시"
+      },
+      {
+        cat: '음식 · 과일 · 요리',
+        words: "사탕,라면,김밥,된장,간장,설탕,소금,마늘,양파,당근,감자,수박,바나나,고구마,토마토,오렌지,바닐라,초콜릿,복숭아,포도송,딸기밭,코코넛,무화과,석류알,유자차,모과차,대추차,생강차,인삼차,홍삼액,녹차잎,보리차,옥수수,결명자,둥굴레,우엉차,도라지,더덕구,고사리,시금치,콩나물,깍두기,파김치,갓김치,백김치,물김치,동치미,겉절이,무생채,호박전,버섯전,김치전,빈대떡,감자전,잡채밥,비빔밥,볶음밥,설렁탕,갈비탕,육개장,삼계탕,추어탕,감자탕,순두부,청국장,매운탕,해물탕,불고기,갈비찜,닭갈비,족발집,보쌈집,삼겹살,항정살,등심구,안심구,살치살,부채살,갈비살,떡갈비,돈가스,치킨집,피자집,햄버거,토스트,마카롱,인절미,가래떡,백설기,시루떡,바람떡,절편떡,경단떡,주먹밥,컵라면,짜장면,짬뽕밥,탕수육,깐풍기,유산슬,팔보채,양장피,군만두,물만두,찐만두,왕만두,칼국수,수제비,콩국수,막국수,물냉면,우동집,쌀국수,리조또,파스타,라자냐,그라탕,바비큐,떡볶이,떡국집,단무지,달고나,고추장"
+      },
+      {
+        cat: '동물 · 곤충 · 해양생물',
+        words: "고양이,강아지,호랑이,코끼리,기린아,원숭이,다람쥐,너구리,오소리,두더지,돌고래,거북이,도마뱀,개구리,올챙이,잠자리,사마귀,달팽이,지렁이,거미줄,개미집,벌꿀집,독수리,부엉이,올빼미,갈매기,비둘기,까마귀,제비꽃,기러기,오리배,병아리,송아지,망아지,토끼굴,햄스터,이구아,펠리컨,해파리,말미잘,성게알,전복죽,소라게,바지락,꼬막찜,굴국밥,홍합탕,오징어,주꾸미,고등어,삼치구,참치회,연어회,광어회,우럭탕,도미찜,복어국,아귀찜,장어구,붕어빵,송어회,산천어,멸치볶,새우튀,꽃게탕,대게찜,랍스터,꾀꼬리,고라니,곰돌이,길고양,닭고기,닭날개,닭다리"
+      },
+      {
+        cat: '사물 · 기술 · 가전',
+        words: "드라마,코미디,라디오,카메라,비디오,피아노,콘서트,컴퓨터,모니터,키보드,마우스,스피커,이어폰,노트북,인터넷,이메일,메시지,데이터,시스템,서비스,플랫폼,콘텐츠,마케팅,파트너,매니저,리더십,글로벌,트렌드,스토리,에너지,비타민,미네랄,단백질,호르몬,면역력,마라톤,올림픽,월드컵,챔피언,트로피,스코어,라운드,패널티,코너킥,프리킥,홈런왕,지우개,비행기,태권도,백화점,세탁기,냉장고,전자레,에어컨,선풍기,청소기,식기세,인덕션,가스레,압력밥,전기포,믹서기,토스터,커피머,와플메,에어프,가습기,제습기,공기청,비데기,면도기,드라이,고데기,체중계,혈압계,체온계,안마기,족욕기,찜질팩,구급함,반창고,소독약,해열제,진통제,소화제,감기약,알레르,항생제,연고제,파스붙,안약통,인공눈,렌즈통,보청기,휠체어,목발짚,깁스함,수술실,응급실,중환자,입원실,진료실,검사실,채혈실,약제실,수납창,처방전,영수증,진단서,소견서,보험금,자동차,가로등,가로수,계산기,공유기,건조기,거품기,귀걸이"
+      },
+      {
+        cat: '상태 · 성질 · 일반 어휘',
+        words: "가르침,가뭄철,가슴속,가시밭,가치관,간절함,갈등감,감각적,감동적,감사함,감상문,감수성,감정선,감탄사,갑자기,강력함,강수량,강의실,강조점,객관적,거대함,거리감,거부감,거짓말,걱정감,건강식,건널목,건물주,건설업,건축물,걸음마,검정색,검찰청,겁쟁이,겉모습,게시판,격려금,견고함,견디기,결단력,결론적,결말부,결백함,결심함,결연함,결정권,결합력,결혼식,겸손함,겹겹이,경계선,경고등,경기장,경력직,경로당,경비원,경사진,경쟁력,경전철,경제력,경주마,경찰서,경험담,계단길,계란말,계속됨,계약서,계절감,계획표,고객님,고고학,고급짐,고난도,고달픔,고독감,고립감,고마움,고백함,고소함,고수익,고아원,고열량,고온기,고용주,고유어,고전미,고정관,고집셈,고통감,고향집,곧바로,골목길,곰팡이,곳곳에,공간감,공감대,공격력,공공재,공급량,공동체,공로상,공부방,공사장,공산품,공식적,공연장,공원길,공작소,공장장,공정함,공주님,공중전,공지글,공책방,공통점,공포감,공허함,과거형,과감함,과거사,과도기,과목별,과반수,과보호,과수원,과식함,과실주,과제물,과학관,관객석,관계자,관광객,관람객,관리비,관심사,관용어,관점차,관찰력,광경들,광고판,광복절,광선검,광활함,교과서,교류전,교사직,교수님,교육관,교장실,교재비,교차로,교환권,교회당,구경꾼,구급차,구독자,구두약,구름층,구매력,구분선,구상도,구성원,구속감,구수함,구슬땀,구역질,구원자,구조대,구직자,구청장,구체적,국경선,국내산,국민성,국방부,국산품,국수집,국악기,국어사,국왕님,군것질,군만두,군사력,군중심,굳건함,굳은살,굴곡진,굶주림,궁금증,궁궐터,권고안,권력자,권리금,권위적,권장량,귀가길,귀공자,귀국길,귀빈석,귀신꿈,귀여움,귀중품,귀찮음,귓속말,규격품,규율적,규정집,규칙적,균등함,균열감,균형감,귤껍질,그늘막,그대로,그동안,그릇장,그리움,그림자,그림책,그물망,그윽함,극단적,극복함,극심함,극장가,극찬함,근거지,근로자,근무지,근본적,근사함,근시안,근육량,근처에,글귀들,글솜씨,글쓰기,글자판,글짓기,금메달,금반지,금방울,금빛물,금요일,금욕적,금은방,금융권,금지령,급격히,급등세,급락세,급박함,급성장,급속도,급식실,급여일,긍정적,기간제,기계공,기공식,기관사,기관지,기념일,기념품,기능성,기다림,기대감,기도문,기동력,기름기,기막힘,기묘함,기부금,기분파,기본기,기쁨조,기상청,기성복,기숙사,기술자,기억력,기업가,기여도,기온차,기원전,기운참,기울기,기준점,기지개,기차역,기초반,기침약,기타줄,기특함,기하학,기행문,기호품,기획안,긴장감,길거리,길바닥,길안내,길잡이,길쭉함,김장철,김치국,깊숙이,깊이감,나그네,나눔터,나라님,나란히,나룻배,나머지,나무꾼,나물밥,나사못,나약함,나열식,나이테,나침반,나타남,나태함,나팔관,나들이,낙관적,낙서장,낙심함,낙엽길,낙제점,낙지탕,낙찰가,낙천적,낙하산,난기류,난방비,난쟁이,난처함,난타전,난투극,날개짓,날렵함,날마다,날벼락,날짜표,날카로,남극점,남다름,남동생,남매간,남성미,남학생,납득함,납작코,낭독회,낭만적,낭비벽,낭패감,낯가림,낯설다,내구력,내륙국,내밀함,내부자,내색함,내성적,내용물,내장탕,내적미,내조자,내포함,내향적,냉각수,냉담함,냉동실,냉면집,냉방병,냉정함,냉철함,냉풍기,냉혈한,너무나,넉넉함,넋두리,널뛰기,널빤지,넘나듦,넘어감,넘쳐남,네거리,네모난,넷째날,녀석들,노곤함,노년기,노동자,노란색,노랫말,노력파,노련함,노령화,노루발,노리개,노모님,노무사,노부부,노선도,노숙자,노약자,노어촌,노여움,노오란,노인정,노점상,노조원,노천탕,노출증,노파심,노폐물,노하우,녹내장,녹두전,녹색창,녹슨못,녹음기,녹지대,녹차밭,논리적,논문집,논밭길,논설문,논술학,논어집,논쟁점,논증력,논평자,놀라움,놀림감,놀이터,놀이방,농가주,농경지,농구공,농기구,농담조,농림부,농민가,농부님,농산물,농약통,농어촌,농업국,농원지,농익은,농장주,농촌길,농축액,높다랗,높아짐,높임말,놓치다,뇌구조,뇌세포,뇌졸중,누구든,누군가,누더기,누락됨,누런색,누룽지,누리꾼,누적액,눈꺼풀,눈꼬리,눈높이,눈동자,눈뜨다,눈물샘,눈바닥,눈부심,눈앞에,눈여겨,눈요기,눈웃음,눈인사,눈짐작,눈초리,눈치껏,눈화장,눌림목,뉘우침,뉴스룸,느긋함,느낌표,느림보,느슨함,늘어남,늘푸른,능력자,능동적,능률적,능선길,능숙함,능통함,능하다,늦가을,늦더위,늦둥이,늦바람,늦추다,늪지대,니트옷,닉네임,다각도,다과상,다급함,다기능,다년간,다녀감,다다름,다독가,다듬기,다리미,다릿발,다목적,다문화,다반사,다발성,다방면,다변화,다부진,다섯째,다소곳,다수결,다습함,다시마,다신교,다양성,다열질,다용도,다원화,다정함,다중이,다짐함,다채로,다층적,다툼질,다편화,다품종,다행히,다혈질,다화성,닥치다,단가표,단거리,단결력,단골집,단과대,단기전,단단함,단둘이,단락별,단련장,단맛이,단면도,단명함,단모음,단문장,단백질,단보름,단본전,단색화,단서조,단선적,단성음,단세포,단속반,단순함,단숨에,단식원,단아함,단안경,단어장,단연코,단열재,단오날,단원별,단위당,단일화,단자모,단장함,단절감,단점들,단정함,단조로,단좌식,단주함,단중심,단지내,단직함,단진동,단추구,단축키,단출함,단층집,단칼에,단콤함,단타매,단편선,단합대,단행본,단향목,단호함,단화신,단활음,단효소,단훈육,달걀말,달구지,달그락,달나라,달달함,달동네,달라짐,달래무,달려감,달력표,달맞이,달변가,달성감,달아남,달콤함,달포만,닮은꼴,담그다,담긴뜻,담낭염,담당자,담대함,담론장,담벼락,담보물,담북장,담비털,담수어,담시집,담쌓다,담약과,담열기,담쟁이,담적병,담즙산,담천후,담청색,담체액,담화문,답답함,답례품,답변서,답사길,답안지,답장함,답정너,답파함,당구장,당국자,당권파,당근즙,당기다,당뇨병,당당함,당독소,당돌함,당동맥,당량점,당면과,당목화,당반죽,당백전,당번표,당부말,당분간,당사자,당삼촌,당상관,당선작,당섭취,당성분,당소변,당숙모,당시인,당신께,당안정,당약과,당양성,당어음,당연함,당오전,당외교,당뇨식,당원증,당위성,당유자,당의정,당자금,당작물,당재정,당적보,당전분,당절임,당점막,당정청,당조절,당뇨약,당주도,당중독,당지질,당직실,당차다,당첨금,당초에,당축적,당출납,당콩밥,당타액,당투여,당편중,당평형,당포도,당표준,당품종,당풍습,당피로,당필수,당하관,당학파,당함량,당해년,당행동,당혈당,당황함,당효능,당흡수,대가족,대각선,대간첩,대감님,대강당,대개는,대건물,대결구,대계열,대고모,대공포,대과거,대괄호,대광장,대국적,대규모,대극장,대기권,대기실,대기업,대기질,대기표,대길운,대김치,대낮에,대내외,대농가,대단원,대단함,대담함,대답함,대대로,대도시,대동맥,대두됨,대들보,대등함,대딸기,대략적,대륙붕,대리석,대리점,대립각,대마왕,대만족,대망신,대매출,대머리,대명사,대명절,대모험,대목장,대문앞,대물림,대미지,대민지,대바늘,대박남,대반전,대발견,대방어,대배경,대백과,대번에,대범함,대법관,대변인,대별됨,대보름,대본집,대부분,대분노,대비책,대사관,대사량,대사집,대상자,대선배,대설주,대성공,대세남,대소변,대소사,대속죄,대손실,대송사,대수술,대숲길,대승리,대시인,대식가,대실패,대심문,대아들,대악마,대안책,대애국,대야망,대양주,대어획,대언론,대업적,대여점,대역죄,대연정,대열차,대예언,대온실,대왕님,대외비,대요구,대용량,대우주,대운하,대원군,대원칙,대월급,대위기,대유행,대으뜸,대응책,대의원,대이동,대인배,대일전,대임무,대입시,대자연,대작전,대잔치,대장간,대장부,대장암,대재앙,대저택,대적함,대절약,대정전,대제국,대조적,대족장,대존경,대졸자,대종교,대좌석,대죄인,대주교,대주주,대중성,대중화,대지진,대진표,대집합,대짜리,대찬성,대참사,대창조,대책위,대처법,대천사,대첩비,대청소,대체품,대초원,대총리,대추나무,대출금,대충격,대취타,대측량,대침략,대칭축,대타석,대탈출,대탐험,대탕진,대태풍,대터널,대테러,대토론,대통합,대투쟁,대특종,대파동,대패배,대팽창,대편성,대평원,대포알,대폭락,대폭발,대폭설,대폭우,대폭증,대표현,대풍년,대피소,대필가,대학가,대학생,대학원,대함대,대항해,대해전,대행진,대향연,대헌장,대혁명,대현자,대혈투,대협곡,대형견,대형차,대호황,대혼란,대홍수,대화재,대화창,대확산,대환영,대활약,대회장,대효과,대후퇴,대훈장,대휴식,대흥행,대희망,대히트"
+      },
+      {
+        cat: '복자모 포함 일반 어휘',
+        words: "화요일,목요일,토요일,일요일,수요일,월요일,금요일,외국인,외국어,외출복,외삼촌,외아들,외동딸,외로움,외면함,외부인,외상값,외식비,외제차,외피층,외항선,외형상,위기감,위대함,위력적,위로금,위반자,위병소,위상차,위생적,위선자,위신추,위압감,위약금,위원장,위인전,위임장,위장병,위중함,위지표,위착감,위척도,위천공,위축감,위층집,위탁모,위태로,위통약,위파열,위하수,위해성,위험성,위협감,위화감,위훈비,의견서,의구심,의녀복,의논함,의대생,의도적,의뢰인,의류함,의리남,의무감,의문점,의복비,의본능,의사당,의사록,의사봉,의상실,의석수,의식주,의심병,의아함,의연함,의욕적,의원직,의인화,의자왕,의장대,의전팀,의절함,의존도,의지력,의진균,의처증,의천도,의첩지,의총회,의치과,의탁처,의태어,의투쟁,의판단,의편향,의학계,의합의,의행동,의향서,의헌법,의혈단,의협심,의형제,의호신,의혼란,의화합,의환경,의환자,의활동,의황제,의회주,의효력,의후원,의훈령,의희생,의힘찬,꼬부랑,꾸러기,끈적임,깔끔함,깜짝쇼,깨달음,깨끗함,깨소금,껍데기,꼬리표,꼭대기,꼼꼼함,꽃다발,꽃향기,꾸준함,꿀단지,꿈나라,따뜻함,따라감,따분함,따스함,땀방울,땅거미,땅콩잼,때때로,때밀이,땡볕에,떨어짐,떼쓰기,또렷함,똑똑함,뚜렷함,뚝배기,뚫어짐,뛰어남,뜨거움,뜨개질,뜯어먹,뜰안에,뜻밖의,띠동갑,빠르다,빨간색,빨래판,빨랫줄,빵공장,빵부스,빼곡함,빼기표,빼돌림,빼어남,뺏기다,뺨맞다,뻔뻔함,뼈마디,뼈아픔,뽀뽀함,뽑기왕,뾰족함,뿌듯함,뿌리깊,뿔테안,뿜어냄,삐걱거,삐뚤어,삐삐선,싸구려,싸움꾼,싸이클,싹트다,싼값에,쌀가게,쌀보리,쌈지돈,쌍둥이,쌍방울,쌍안경,쌍화차,써먹다,썩은물,썰렁함,썰매장,썸타다,쏘가리,쏙독새,쏟아짐,쏠림현,쏴아아,쑤시다,쑥스럽,쑥절편,쑨죽집,쓰기왕,쓰다듬,쓰레기,쓰러짐,쓰리다,쓴소리,쓸개즙,쓸모없,쓸쓸함,씀바귀,씌우다,씨름꾼,씨앗심,씩씩함,씻어냄,개구리,개나리,개미집,개성파,개인전,개척자,건강식,건배사,계곡물,계단길,계산기,계속됨,계약서,계절감,계획표,고백함,공격력,공연장,공유기,과거사,과감함,과도기,과목별,과반수,과수원,과제물,과학관,관객석,관계자,관광객,관람객,교과서,교류전,교배종,교사직,교수님,교양과,교육관,교재비,교차로,교환권,구매력,구세주,구원자,구조대,구체적,국경선,국내산,국방부,국산품,국수집,국악기,국어사,군사력,군중심,귀가길,귀걸이,귀공자,귀국길,귀빈석,귀신꿈,귀여움,귀중품,귀찮음,귓속말,규격품,규율적,규정집,규칙적,균등함,균열감,균형감,귤껍질,그늘막,그대로,그동안,그릇장,그리움,그림자,그림책,그물망,그윽함,극단적,극복함,극심함,극장가,극찬함,근거지,근로자,근무지,근본적,근사함,근육량,글귀들,글솜씨,글쓰기,글자판,글짓기,금메달,금반지,금방울,금빛물,금요일,금은방,금융권,금지령,급격히,급등세,급락세,급박함,급성장,급속도,급식실,급여일,긍정적,기간제,기계공,기공식,기관사,기관지,기념일,기념품,기능성,기다림,기대감,기도문,기동력,기름기,기막힘,기묘함,기부금,기분파,기본기,기상청,기성복,기숙사,기술자,기억력,기업가,기여도,기온차,기원전,기운참,기울기,기준점,기지개,기차역,기초반,기침약,기타줄,기특함,기하학,기행문,기호품,기획안,긴장감,길거리,길바닥,길안내,길잡이,김장철,김치국,깊숙이,깊이감"
+      }
+    ];
+
+    /**
+     * =========================================================================
+     * 3. 게임 상태 및 순수 일반 어휘 풀 초기화 (동기식 0.01초 즉시 구축)
+     * =========================================================================
+     */
+    const WORD_POOLS = {
+      basic: [], // 단자모 24자 전용
+      all: []    // 단자모 + 복자모 36자 전체
+    };
+
+    function buildWordPools() {
+      const seen = new Set();
+
+      for (let g = 0; g < CATEGORIZED_RAW_WORDS.length; g++) {
+        const group = CATEGORIZED_RAW_WORDS[g];
+        const tokens = group.words.split(',');
+        for (let i = 0; i < tokens.length; i++) {
+          const w = tokens[i].trim();
+          if (!w || seen.has(w)) continue;
+          const analyzed = analyzeWord6Jamo(w, group.cat);
+          if (analyzed) {
+            seen.add(w);
+            WORD_POOLS.all.push(analyzed);
+            if (!analyzed.isComplex) {
+              WORD_POOLS.basic.push(analyzed);
+            }
+          }
+        }
+      }
+
+      // 순수 한국어 관형사 + 일반 보통명사 결합으로 1,600개 이상 어휘 풀 안정적 확보 (고유명사 0%)
+      const MODIFIERS = ['새', '첫', '참', '큰', '작은', '푸른', '맑은', '밝은', '깊은', '높은', '넓은', '고운'];
+      const NOUNS = [
+        '마음', '바람', '구름', '하늘', '바다', '산길', '강물', '달빛', '별빛', '햇살',
+        '눈빛', '손길', '발길', '숨결', '물결', '꽃잎', '단풍', '낙엽', '이슬', '서리',
+        '얼음', '불꽃', '향기', '그림', '문장', '단어', '약속', '비밀', '진실', '믿음',
+        '존경', '감동', '기쁨', '슬픔', '걱정', '안정', '평온', '만족', '노력', '성공',
+        '도전', '경험', '실력', '천재', '영웅', '왕자', '장군', '행복', '사랑', '희망',
+        '용기', '추억', '기억', '생각', '느낌', '시간', '우정', '인연', '미래', '순간',
+        '영원', '시작', '출발', '도착', '정답', '소원', '축복', '행운', '기적', '보물',
+        '황금', '진주', '반지', '시계', '달력', '일기', '수첩', '편지', '선물', '사진',
+        '거울', '창문', '책상', '연필', '공책', '우산', '안경', '지갑', '열쇠'
+      ];
+
+      for (let p = 0; p < MODIFIERS.length; p++) {
+        for (let n = 0; n < NOUNS.length; n++) {
+          const candidate = MODIFIERS[p] + NOUNS[n];
+          if (seen.has(candidate)) continue;
+          const analyzed = analyzeWord6Jamo(candidate, '합성 일반 명사');
+          if (analyzed) {
+            seen.add(candidate);
+            WORD_POOLS.all.push(analyzed);
+            if (!analyzed.isComplex) {
+              WORD_POOLS.basic.push(analyzed);
+            }
+          }
+        }
+      }
+    }
+
+    // 스크립트 로드 즉시 동기 실행
+    buildWordPools();
+
+    const STORAGE_KEYS = {
+      STATS: 'kkodle_infinite_stats_v5',
+      SETTINGS: 'kkodle_infinite_settings_v5',
+      HISTORY: 'kkodle_infinite_used_v5'
+    };
+
+    const state = {
+      includeComplex: false, // false: 단자모 24자(기본), true: 복자모 36자 포함
+      secretObj: null,       // { word, jamos, isComplex, category }
+      guesses: [],           // { jamos: string[], statuses: string[], assembled: string }
+      currentJamos: [],
+      gameStatus: 'playing', // 'playing' | 'won' | 'lost'
+      shiftState: 0,         // 0: 기본, 1: 1회 쌍/복 전환, 2: 잠금
+      lastShiftTap: 0,
+      isAnimating: false,
+      keyStatuses: {},
+      usedWords: [],
+      hintStep: 0,
+      settings: {
+        dark: true
+      },
+      stats: {
+        played: 0,
+        wins: 0,
+        currentStreak: 0,
+        maxStreak: 0,
+        distribution: [0, 0, 0, 0, 0, 0]
+      }
+    };
+
+    function loadPersistentState() {
+      try {
+        const s = JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS));
+        if (s) {
+          if (typeof s.dark === 'boolean') state.settings.dark = s.dark;
+          if (typeof s.includeComplex === 'boolean') state.includeComplex = s.includeComplex;
+        }
+      } catch (e) {}
+
+      try {
+        const st = JSON.parse(localStorage.getItem(STORAGE_KEYS.STATS));
+        if (st) state.stats = { ...state.stats, ...st };
+      } catch (e) {}
+
+      try {
+        const hist = JSON.parse(localStorage.getItem(STORAGE_KEYS.HISTORY));
+        if (Array.isArray(hist)) state.usedWords = hist;
+      } catch (e) {}
+    }
+
+    function savePersistentState() {
+      try {
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify({
+          dark: state.settings.dark,
+          includeComplex: state.includeComplex
+        }));
+        localStorage.setItem(STORAGE_KEYS.STATS, JSON.stringify(state.stats));
+        localStorage.setItem(STORAGE_KEYS.HISTORY, JSON.stringify(state.usedWords.slice(-1400)));
+      } catch (e) {}
+    }
+
+    /**
+     * =========================================================================
+     * 4. 암호학적 난수(crypto.getRandomValues) 기반 Fisher-Yates 무한 랜덤 출제
+     * =========================================================================
+     */
+    function getCryptoRandomInt(maxExclusive) {
+      if (maxExclusive <= 1) return 0;
+      if (window.crypto && window.crypto.getRandomValues) {
+        const arr = new Uint32Array(1);
+        window.crypto.getRandomValues(arr);
+        return arr[0] % maxExclusive;
+      }
+      return Math.floor(Math.random() * maxExclusive);
+    }
+
+    function fisherYatesShuffle(array) {
+      const copy = array.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = getCryptoRandomInt(i + 1);
+        const temp = copy[i];
+        copy[i] = copy[j];
+        copy[j] = temp;
+      }
+      return copy;
+    }
+
+    function getActivePool() {
+      return state.includeComplex ? WORD_POOLS.all : WORD_POOLS.basic;
+    }
+
+    function pickRandomWordObj() {
+      const pool = getActivePool();
+      const usedSet = new Set(state.usedWords);
+      let candidates = pool.filter(item => !usedSet.has(item.word));
+
+      if (candidates.length === 0) {
+        const lastWord = state.secretObj ? state.secretObj.word : null;
+        state.usedWords = lastWord ? [lastWord] : [];
+        candidates = pool.filter(item => item.word !== lastWord);
+        if (candidates.length === 0) candidates = pool;
+      }
+
+      const shuffled = fisherYatesShuffle(candidates);
+      const chosen = shuffled[0];
+      state.usedWords.push(chosen.word);
+      savePersistentState();
+      return chosen;
+    }
+
+    function startNewInfiniteGame() {
+      state.currentJamos = [];
+      state.shiftState = 0;
+      state.isAnimating = false;
+      state.guesses = [];
+      state.gameStatus = 'playing';
+      state.keyStatuses = {};
+      state.hintStep = 0;
+
+      const nextBarBtn = document.getElementById('btn-next-after-end');
+      nextBarBtn.classList.add('hidden');
+      nextBarBtn.classList.remove('flex');
+
+      state.secretObj = pickRandomWordObj();
+
+      recalculateKeyStatuses();
+      updateHeaderStatusUI();
+      renderBoard();
+      renderKeyboard();
+      updateLivePreviewUI();
+    }
+
+    /**
+     * =========================================================================
+     * 5. 자모 판정 알고리즘 (초록 #22c55e / 노랑 #eab308 / 회색 #334155)
+     * =========================================================================
+     */
+    function evaluateGuess(guessJamos, targetJamos) {
+      const statuses = Array(6).fill('absent');
+      const remaining = {};
+
+      for (let i = 0; i < 6; i++) {
+        if (guessJamos[i] === targetJamos[i]) {
+          statuses[i] = 'correct';
+        } else {
+          remaining[targetJamos[i]] = (remaining[targetJamos[i]] || 0) + 1;
+        }
+      }
+
+      for (let i = 0; i < 6; i++) {
+        if (statuses[i] === 'correct') continue;
+        const ch = guessJamos[i];
+        if (remaining[ch] > 0) {
+          statuses[i] = 'present';
+          remaining[ch]--;
+        }
+      }
+      return statuses;
+    }
+
+    const PRIORITY = { correct: 3, present: 2, absent: 1 };
+
+    function recalculateKeyStatuses() {
+      state.keyStatuses = {};
+      state.guesses.forEach(g => {
+        g.jamos.forEach((ch, idx) => {
+          const st = g.statuses[idx];
+          const prev = state.keyStatuses[ch];
+          if (!prev || PRIORITY[st] > PRIORITY[prev]) {
+            state.keyStatuses[ch] = st;
+          }
+        });
+      });
+    }
+
+    /**
+     * =========================================================================
+     * 6. UI 렌더링 (헤더 상태, 6x6 보드, 모드별 자동 전환 키보드)
+     * =========================================================================
+     */
+    function updateHeaderStatusUI() {
+      if (state.settings.dark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+
+      const poolText = document.getElementById('pool-count-text');
+      if (state.includeComplex) {
+        poolText.textContent = `복자모 포함 ${WORD_POOLS.all.length.toLocaleString()}단어`;
+      } else {
+        poolText.textContent = `단자모 전용 ${WORD_POOLS.basic.length.toLocaleString()}단어`;
+      }
+
+      const pill = document.getElementById('complex-pill');
+      if (state.includeComplex) {
+        pill.className = 'w-8 h-4.5 rounded-full bg-emerald-600 p-0.5 flex items-center justify-end transition-colors';
+      } else {
+        pill.className = 'w-8 h-4.5 rounded-full bg-slate-300 dark:bg-slate-600 p-0.5 flex items-center justify-start transition-colors';
+      }
+    }
+
+    function getTileStatusClasses(status) {
+      if (status === 'correct') return 'bg-[#22c55e] border-[#22c55e] text-white';
+      if (status === 'present') return 'bg-[#eab308] border-[#eab308] text-white';
+      if (status === 'absent') return 'bg-[#64748b] dark:bg-[#334155] border-[#64748b] dark:border-[#334155] text-white';
+      return '';
+    }
+
+    function renderBoard() {
+      const wrapper = document.getElementById('board-wrapper');
+      wrapper.innerHTML = '';
+
+      for (let r = 0; r < 6; r++) {
+        const rowEl = document.createElement('div');
+        rowEl.id = `board-row-${r}`;
+        rowEl.className = 'w-full flex items-center justify-center gap-1.5';
+
+        const gridEl = document.createElement('div');
+        gridEl.className = 'grid grid-cols-6 gap-1.5 flex-1 max-w-[332px]';
+
+        const guess = state.guesses[r];
+        const isCurrent = (r === state.guesses.length && state.gameStatus === 'playing');
+
+        for (let c = 0; c < 6; c++) {
+          const tile = document.createElement('div');
+          tile.id = `tile-${r}-${c}`;
+
+          let char = '';
+          let status = null;
+          if (guess) {
+            char = guess.jamos[c];
+            status = guess.statuses[c];
+          } else if (isCurrent) {
+            char = state.currentJamos[c] || '';
+          }
+
+          let cls = 'aspect-square rounded-xl flex items-center justify-center text-xl sm:text-2xl font-extrabold border-2 transition-colors ';
+          if (status) {
+            cls += getTileStatusClasses(status);
+          } else if (char) {
+            cls += 'border-slate-500 dark:border-slate-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white';
+          } else {
+            cls += 'border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50';
+          }
+
+          tile.className = cls;
+          tile.textContent = char;
+          gridEl.appendChild(tile);
+        }
+
+        const wordBadge = document.createElement('div');
+        wordBadge.id = `row-word-${r}`;
+        wordBadge.className = 'w-13 h-11 rounded-xl flex items-center justify-center text-xs font-extrabold tracking-tight shrink-0 transition-all ';
+
+        if (guess) {
+          wordBadge.textContent = guess.assembled;
+          wordBadge.className += 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700';
+        } else if (isCurrent && state.currentJamos.length > 0) {
+          wordBadge.textContent = assembleJamosToKorean(state.currentJamos);
+          wordBadge.className += 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+        } else {
+          wordBadge.textContent = '';
+          wordBadge.className += 'bg-slate-100/70 dark:bg-slate-900/40 text-slate-400';
+        }
+
+        rowEl.appendChild(gridEl);
+        rowEl.appendChild(wordBadge);
+        wrapper.appendChild(rowEl);
+      }
+    }
+
+    // 키보드 레이아웃 (기본 24자모 vs 복자모 36자 전환)
+    const KB_BASE = {
+      row1: ['ㅂ', 'ㅈ', 'ㄷ', 'ㄱ', 'ㅅ', 'ㅛ', 'ㅕ', 'ㅑ'],
+      row2: ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ', 'ㅗ', 'ㅓ', 'ㅏ', 'ㅣ'],
+      row3: ['ㅋ', 'ㅌ', 'ㅊ', 'ㅍ', 'ㅠ', 'ㅜ', 'ㅡ']
+    };
+
+    const KB_SHIFT_COMPLEX = {
+      row1: ['ㅃ', 'ㅉ', 'ㄸ', 'ㄲ', 'ㅆ', 'ㅛ', 'ㅕ', 'ㅑ'],
+      row2: ['ㅁ', 'ㄴ', 'ㅇ', 'ㄹ', 'ㅎ', 'ㅘ', 'ㅝ', 'ㅐ', 'ㅔ'],
+      row3: ['ㅙ', 'ㅞ', 'ㅚ', 'ㅟ', 'ㅢ', 'ㅒ', 'ㅖ']
+    };
+
+    function getKeyColorClasses(jamo) {
+      const st = state.keyStatuses[jamo];
+      if (st === 'correct') return 'bg-[#22c55e] text-white';
+      if (st === 'present') return 'bg-[#eab308] text-white';
+      if (st === 'absent') return 'bg-slate-300/65 dark:bg-[#1e293b] text-slate-400 dark:text-slate-500';
+      return ALL_VOWELS.has(jamo)
+        ? 'bg-slate-200/90 dark:bg-[#334155] text-slate-900 dark:text-white'
+        : 'bg-slate-200 dark:bg-[#475569] text-slate-900 dark:text-white';
+    }
+
+    function createKeyBtn(jamo) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = jamo;
+      btn.className = `kb-key h-12 rounded-xl font-bold text-base sm:text-lg flex items-center justify-center shadow-2xs ${getKeyColorClasses(jamo)}`;
+      btn.addEventListener('click', () => handleJamoPress(jamo));
+      return btn;
+    }
+
+    function renderKeyboard() {
+      const isShifted = state.includeComplex && state.shiftState > 0;
+      const activeLayout = isShifted ? KB_SHIFT_COMPLEX : KB_BASE;
+
+      const r1 = document.getElementById('kb-row-1');
+      r1.innerHTML = '';
+      activeLayout.row1.forEach(j => r1.appendChild(createKeyBtn(j)));
+
+      const r2 = document.getElementById('kb-row-2');
+      r2.innerHTML = '';
+      activeLayout.row2.forEach(j => r2.appendChild(createKeyBtn(j)));
+
+      const r3 = document.getElementById('kb-row-3');
+      r3.innerHTML = '';
+
+      if (state.includeComplex) {
+        const shiftBtn = document.createElement('button');
+        shiftBtn.type = 'button';
+        shiftBtn.textContent = state.shiftState === 2 ? '쌍/복🔒' : '쌍/복';
+        shiftBtn.className = `kb-key h-12 px-2.5 rounded-xl font-extrabold text-xs flex items-center justify-center shrink-0 transition ${
+          state.shiftState > 0
+            ? 'bg-emerald-600 text-white shadow-inner'
+            : 'bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+        }`;
+        shiftBtn.addEventListener('click', () => {
+          const now = Date.now();
+          if (state.shiftState === 1 && now - state.lastShiftTap < 420) {
+            state.shiftState = 2;
+          } else {
+            state.shiftState = state.shiftState === 0 ? 1 : 0;
+          }
+          state.lastShiftTap = now;
+          renderKeyboard();
+        });
+        r3.appendChild(shiftBtn);
+      }
+
+      const midGrid = document.createElement('div');
+      midGrid.className = 'grid grid-cols-7 gap-1 flex-1';
+      activeLayout.row3.forEach(j => midGrid.appendChild(createKeyBtn(j)));
+      r3.appendChild(midGrid);
+
+      const backBtn = document.createElement('button');
+      backBtn.type = 'button';
+      backBtn.ariaLabel = '지우기';
+      backBtn.className = 'kb-key h-12 px-3 rounded-xl bg-slate-300 dark:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0';
+      backBtn.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+          <path d="M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z"></path>
+          <line x1="18" y1="9" x2="12" y2="15"></line>
+          <line x1="12" y1="9" x2="18" y2="15"></line>
+        </svg>
+      `;
+      backBtn.addEventListener('click', handleBackspace);
+      r3.appendChild(backBtn);
+    }
+
+    function updateLivePreviewUI() {
+      const previewEl = document.getElementById('live-preview');
+      const countHintEl = document.getElementById('submit-count-hint');
+      const len = state.currentJamos.length;
+
+      countHintEl.textContent = `(${len}/6)`;
+      if (len === 0) {
+        previewEl.textContent = '· · ·';
+      } else {
+        const assembled = assembleJamosToKorean(state.currentJamos);
+        previewEl.textContent = assembled.split('').join(' ');
+      }
+    }
+
+    /**
+     * =========================================================================
+     * 7. 입력 핸들러 & 완성 한글 음절 구조 검증 및 정답 판정
+     * =========================================================================
+     */
+    function handleJamoPress(jamo) {
+      if (state.gameStatus !== 'playing' || state.isAnimating) return;
+
+      if (state.includeComplex && state.currentJamos.length > 0) {
+        const prevJamo = state.currentJamos[state.currentJamos.length - 1];
+        const combinedVowel = VOWEL_COMBINE_MAP[prevJamo + jamo];
+        if (combinedVowel) {
+          const replaceIdx = state.currentJamos.length - 1;
+          state.currentJamos[replaceIdx] = combinedVowel;
+          refreshCurrentRowTiles(replaceIdx);
+          updateLivePreviewUI();
+          return;
+        }
+      }
+
+      if (state.currentJamos.length >= 6) return;
+
+      const idx = state.currentJamos.length;
+      state.currentJamos.push(jamo);
+
+      if (state.shiftState === 1) {
+        state.shiftState = 0;
+        renderKeyboard();
+      }
+
+      refreshCurrentRowTiles(idx);
+      updateLivePreviewUI();
+    }
+
+    function handleBackspace() {
+      if (state.gameStatus !== 'playing' || state.isAnimating) return;
+      if (state.currentJamos.length === 0) return;
+
+      const removedIdx = state.currentJamos.length - 1;
+      state.currentJamos.pop();
+
+      refreshCurrentRowTiles(removedIdx, true);
+      updateLivePreviewUI();
+    }
+
+    function refreshCurrentRowTiles(changedIdx, isRemoval = false) {
+      const rowIdx = state.guesses.length;
+      for (let c = 0; c < 6; c++) {
+        const tile = document.getElementById(`tile-${rowIdx}-${c}`);
+        if (!tile) continue;
+        const ch = state.currentJamos[c] || '';
+        tile.textContent = ch;
+        if (ch) {
+          tile.className = 'aspect-square rounded-xl flex items-center justify-center text-xl sm:text-2xl font-extrabold border-2 transition-colors border-slate-500 dark:border-slate-400 bg-white dark:bg-slate-800 text-slate-900 dark:text-white';
+        } else {
+          tile.className = 'aspect-square rounded-xl flex items-center justify-center text-xl sm:text-2xl font-extrabold border-2 transition-colors border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/50';
+        }
+      }
+
+      if (!isRemoval) {
+        const targetTile = document.getElementById(`tile-${rowIdx}-${changedIdx}`);
+        if (targetTile) {
+          targetTile.classList.remove('tile-pop');
+          void targetTile.offsetWidth;
+          targetTile.classList.add('tile-pop');
+        }
+      }
+
+      const rowBadge = document.getElementById(`row-word-${rowIdx}`);
+      if (rowBadge) {
+        if (state.currentJamos.length > 0) {
+          rowBadge.textContent = assembleJamosToKorean(state.currentJamos);
+          rowBadge.className = 'w-13 h-11 rounded-xl flex items-center justify-center text-xs font-extrabold tracking-tight shrink-0 transition-all bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30';
+        } else {
+          rowBadge.textContent = '';
+          rowBadge.className = 'w-13 h-11 rounded-xl flex items-center justify-center text-xs font-extrabold tracking-tight shrink-0 transition-all bg-slate-100/70 dark:bg-slate-900/40 text-slate-400';
+        }
+      }
+    }
+
+    function shakeCurrentRow() {
+      const row = document.getElementById(`board-row-${state.guesses.length}`);
+      if (!row) return;
+      row.classList.remove('row-shake');
+      void row.offsetWidth;
+      row.classList.add('row-shake');
+    }
+
+    function handleSubmit() {
+      if (state.gameStatus !== 'playing' || state.isAnimating) return;
+
+      if (state.currentJamos.length < 6) {
+        showToast('자모 6개를 모두 입력해주세요!');
+        shakeCurrentRow();
+        return;
+      }
+
+      // 완성된 표준 한국어 음절(초성+중성, 또는 초성+중성+유효 종성)인지 검증
+      // '감옥'을 비롯한 모든 올바른 6자모 한글 음절 입력을 제약 없이 허용
+      const assembled = assembleJamosToKorean(state.currentJamos);
+      const isCompleteHangulSyllables = /^[가-힣]{2,3}$/.test(assembled);
+
+      if (!isCompleteHangulSyllables) {
+        showToast('올바른 한글 음절(초성·중성·종성) 순서가 아닙니다.');
+        shakeCurrentRow();
+        return;
+      }
+
+      const rowIdx = state.guesses.length;
+      const targetJamos = state.secretObj.jamos;
+      const statuses = evaluateGuess(state.currentJamos, targetJamos);
+
+      state.guesses.push({
+        jamos: [...state.currentJamos],
+        statuses,
+        assembled
+      });
+      state.currentJamos = [];
+      state.isAnimating = true;
+      updateLivePreviewUI();
+
+      statuses.forEach((st, colIdx) => {
+        const tile = document.getElementById(`tile-${rowIdx}-${colIdx}`);
+        setTimeout(() => {
+          if (tile) {
+            tile.classList.add('tile-flip');
+            setTimeout(() => {
+              tile.className = `aspect-square rounded-xl flex items-center justify-center text-xl sm:text-2xl font-extrabold border-2 transition-colors ${getTileStatusClasses(st)}`;
+            }, 230);
+          }
+        }, colIdx * 95);
+      });
+
+      setTimeout(() => {
+        state.isAnimating = false;
+        recalculateKeyStatuses();
+        renderKeyboard();
+
+        const rowBadge = document.getElementById(`row-word-${rowIdx}`);
+        if (rowBadge) {
+          rowBadge.textContent = assembled;
+          rowBadge.className = 'w-13 h-11 rounded-xl flex items-center justify-center text-xs font-extrabold tracking-tight shrink-0 transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700';
+        }
+
+        const isWon = statuses.every(s => s === 'correct');
+        const isLost = !isWon && state.guesses.length >= 6;
+
+        if (isWon) {
+          state.gameStatus = 'won';
+          for (let c = 0; c < 6; c++) {
+            const t = document.getElementById(`tile-${rowIdx}-${c}`);
+            if (t) setTimeout(() => t.classList.add('tile-bounce'), c * 65);
+          }
+          recordStats(true, state.guesses.length);
+
+          const msgs = ['천재적이네요! 🎉', '대단해요! ✨', '훌륭합니다! 👏', '멋져요! 👍', '아슬아슬 성공! 😅', '해냈어요! 🎊'];
+          showToast(msgs[state.guesses.length - 1] || '정답입니다!');
+          showNextActionBtn();
+          setTimeout(() => openStatsModal(true), 950);
+        } else if (isLost) {
+          state.gameStatus = 'lost';
+          recordStats(false, 6);
+          showToast(`아쉬워요! 정답은 '${state.secretObj.word}' 입니다.`);
+          showNextActionBtn();
+          setTimeout(() => openStatsModal(true), 950);
+        }
+      }, 6 * 95 + 290);
+    }
+
+    function showNextActionBtn() {
+      const btn = document.getElementById('btn-next-after-end');
+      btn.classList.remove('hidden');
+      btn.classList.add('flex');
+    }
+
+    function recordStats(isWin, attempts) {
+      state.stats.played += 1;
+      if (isWin) {
+        state.stats.wins += 1;
+        state.stats.currentStreak += 1;
+        if (state.stats.currentStreak > state.stats.maxStreak) {
+          state.stats.maxStreak = state.stats.currentStreak;
+        }
+        state.stats.distribution[attempts - 1] += 1;
+      } else {
+        state.stats.currentStreak = 0;
+      }
+      savePersistentState();
+    }
+
+    function handleHint() {
+      if (state.gameStatus !== 'playing') {
+        showToast('이미 종료된 게임입니다.');
+        return;
+      }
+      state.hintStep += 1;
+      if (state.hintStep === 1) {
+        showToast(`💡 힌트 1: [${state.secretObj.category}] 분야의 ${state.secretObj.word.length}글자 단어입니다!`, 3200);
+        return;
+      }
+
+      const target = state.secretObj.jamos;
+      const unsolvedIndices = [];
+      for (let i = 0; i < 6; i++) {
+        const alreadyFound = state.guesses.some(g => g.statuses[i] === 'correct');
+        if (!alreadyFound) unsolvedIndices.push(i);
+      }
+      const pickIdx = unsolvedIndices.length > 0
+        ? unsolvedIndices[getCryptoRandomInt(unsolvedIndices.length)]
+        : getCryptoRandomInt(6);
+
+      showToast(`💡 힌트 ${state.hintStep}: ${pickIdx + 1}번째 자모는 '${target[pickIdx]}' 입니다!`, 3200);
+    }
+
+    /**
+     * =========================================================================
+     * 8. 토스트, 통계 모달, 결과 공유
+     * =========================================================================
+     */
+    function showToast(msg, duration = 2200) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'px-4 py-2.5 rounded-xl bg-slate-900/95 dark:bg-slate-100/95 text-white dark:text-slate-900 text-xs sm:text-sm font-bold shadow-lg text-center transition-all duration-200';
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => el.remove(), 220);
+      }, duration);
+    }
+
+    function openStatsModal(showResult = false) {
+      const modal = document.getElementById('modal-stats');
+      const card = document.getElementById('result-word-card');
+
+      if (showResult || state.gameStatus !== 'playing') {
+        card.classList.remove('hidden');
+        const stEl = document.getElementById('result-status-text');
+        if (state.gameStatus === 'won') {
+          stEl.textContent = `🎉 ${state.guesses.length}번 만에 정답 성공!`;
+          stEl.className = 'text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1';
+        } else {
+          stEl.textContent = '도전 종료! 정답 단어';
+          stEl.className = 'text-xs font-bold text-rose-500 mb-1';
+        }
+        document.getElementById('result-word-display').textContent = state.secretObj.word;
+        document.getElementById('result-jamo-display').textContent = state.secretObj.jamos.join(' · ');
+        document.getElementById('result-category-display').textContent = `분류: ${state.secretObj.category}`;
+      } else {
+        card.classList.add('hidden');
+      }
+
+      const { played, wins, currentStreak, maxStreak, distribution } = state.stats;
+      document.getElementById('stat-played').textContent = played;
+      document.getElementById('stat-win-pct').textContent = played > 0 ? `${Math.round((wins / played) * 100)}%` : '0%';
+      document.getElementById('stat-streak').textContent = currentStreak;
+      document.getElementById('stat-max-streak').textContent = maxStreak;
+
+      const distEl = document.getElementById('guess-distribution');
+      distEl.innerHTML = '';
+      const maxVal = Math.max(1, ...distribution);
+
+      distribution.forEach((cnt, idx) => {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2';
+        const pct = Math.max(8, Math.round((cnt / maxVal) * 100));
+        const highlight = (state.gameStatus === 'won' && state.guesses.length === idx + 1);
+        row.innerHTML = `
+          <span class="w-3 text-right text-slate-500">${idx + 1}</span>
+          <div class="flex-1 bg-slate-100 dark:bg-slate-800 rounded-md overflow-hidden h-5 flex items-center">
+            <div style="width:${cnt === 0 ? '24px' : pct + '%'}" class="h-full px-2 flex items-center justify-end text-[11px] text-white rounded-md ${highlight ? 'bg-emerald-600' : 'bg-slate-500 dark:bg-slate-600'}">${cnt}</div>
+          </div>
+        `;
+        distEl.appendChild(row);
+      });
+
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function shareResult() {
+      if (state.guesses.length === 0) {
+        showToast('공유할 플레이 기록이 없습니다.');
+        return;
+      }
+      const modeLabel = state.includeComplex ? '복자모' : '단자모';
+      const score = state.gameStatus === 'won' ? `${state.guesses.length}/6` : 'X/6';
+      const grid = state.guesses.map(g =>
+        g.statuses.map(s => s === 'correct' ? '🟩' : (s === 'present' ? '🟨' : '⬛')).join('')
+      ).join('\n');
+
+      const text = `꼬들 무한모드 (${modeLabel}) ${score}\n\n${grid}`;
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('결과가 클립보드에 복사되었습니다! 📋');
+      } catch (e) {
+        showToast('복사에 실패했습니다.');
+      }
+      document.body.removeChild(ta);
+    }
+
+    function closeAllModals() {
+      ['modal-help', 'modal-stats'].forEach(id => {
+        const el = document.getElementById(id);
+        el.classList.add('hidden');
+        el.classList.remove('flex');
+      });
+    }
+
+    const QWERTY_MAP = {
+      q:'ㅂ', Q:'ㅃ', w:'ㅈ', W:'ㅉ', e:'ㄷ', E:'ㄸ', r:'ㄱ', R:'ㄲ', t:'ㅅ', T:'ㅆ',
+      y:'ㅛ', u:'ㅕ', i:'ㅑ', o:'ㅐ', O:'ㅒ', p:'ㅔ', P:'ㅖ',
+      a:'ㅁ', s:'ㄴ', d:'ㅇ', f:'ㄹ', g:'ㅎ',
+      h:'ㅗ', j:'ㅓ', k:'ㅏ', l:'ㅣ',
+      z:'ㅋ', x:'ㅌ', c:'ㅊ', v:'ㅍ',
+      b:'ㅠ', n:'ㅜ', m:'ㅡ'
+    };
+
+    function bindEvents() {
+      document.getElementById('btn-help').addEventListener('click', () => {
+        const m = document.getElementById('modal-help');
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+      });
+
+      document.getElementById('btn-stats').addEventListener('click', () => openStatsModal(false));
+
+      document.getElementById('btn-theme').addEventListener('click', () => {
+        state.settings.dark = !state.settings.dark;
+        savePersistentState();
+        updateHeaderStatusUI();
+      });
+
+      document.getElementById('btn-new-puzzle').addEventListener('click', () => {
+        startNewInfiniteGame();
+        showToast('새로운 랜덤 단어가 출제되었습니다! 🔄');
+      });
+
+      document.getElementById('btn-toggle-complex').addEventListener('click', () => {
+        state.includeComplex = !state.includeComplex;
+        savePersistentState();
+        startNewInfiniteGame();
+        showToast(
+          state.includeComplex
+            ? '복자모 포함 ON: 쌍자음·이중모음 출제 및 키보드 전환 활성화'
+            : '복자모 포함 OFF: 순수 24자모 전용 모드'
+        );
+      });
+
+      document.getElementById('btn-submit').addEventListener('click', handleSubmit);
+      document.getElementById('btn-hint').addEventListener('click', handleHint);
+      document.getElementById('btn-next-after-end').addEventListener('click', () => {
+        startNewInfiniteGame();
+        showToast('다음 랜덤 문제가 출제되었습니다!');
+      });
+
+      document.getElementById('btn-share').addEventListener('click', shareResult);
+      document.getElementById('btn-modal-next').addEventListener('click', () => {
+        closeAllModals();
+        startNewInfiniteGame();
+        showToast('새로운 랜덤 문제가 출제되었습니다!');
+      });
+
+      document.querySelectorAll('.close-modal').forEach(btn => {
+        btn.addEventListener('click', closeAllModals);
+      });
+
+      ['modal-help', 'modal-stats'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('click', (e) => {
+          if (e.target === el) closeAllModals();
+        });
+      });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.metaKey || e.ctrlKey || e.altKey) return;
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          handleSubmit();
+        } else if (e.key === 'Backspace') {
+          e.preventDefault();
+          handleBackspace();
+        } else if (QWERTY_MAP[e.key]) {
+          e.preventDefault();
+          const mapped = QWERTY_MAP[e.key];
+          if (!state.includeComplex && (!BASIC_CONSONANTS.has(mapped) && !BASIC_VOWELS.has(mapped))) {
+            return;
+          }
+          handleJamoPress(mapped);
+        } else if (ALL_CONSONANTS.has(e.key) || ALL_VOWELS.has(e.key)) {
+          e.preventDefault();
+          if (!state.includeComplex && (!BASIC_CONSONANTS.has(e.key) && !BASIC_VOWELS.has(e.key))) {
+            return;
+          }
+          handleJamoPress(e.key);
+        }
+      });
+    }
+
+    // 즉시 초기화 및 무한 모드 첫 번째 랜덤 문제 출제
+    loadPersistentState();
+    bindEvents();
+    startNewInfiniteGame();
+  </script>
+</body>
+</html>
